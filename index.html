@@ -95,8 +95,9 @@
     <ul>
         <li>Pyramid</li>
         <li>MongoEngine</li>
+        <li>Mako</li>
         <li>zc.buildout</li>
-        <li>lettuce</li>
+        <li>nose and lettuce</li>
     </ul>
     <h3>Also</h3>
     <ul>
@@ -110,7 +111,6 @@
 <section class="slide" id="architecture">
     <h2>Architecture</h2>
     <h3>Run of the mill MVC-ish</h3>
-    <p>&nbsp;</p>
     <div class="slide controller">
         <h4>Controller</h4>
         <p>Pyramid Routes + Views</p>
@@ -202,7 +202,8 @@ def list_(self):
 
 <section class="slide" id="api-layer">
     <h2>Architecture</h2>
-    <h3>API Layer and Data Access</h3>
+    <h3>Core API and Data Access</h3>
+    <p>We keep them separate</p>
 
     <div class="slide">
         <h4>Instead of littering the API with stuff like this</h4>
@@ -224,7 +225,7 @@ topic = UserEvent.get_topic_answers(user_id, event_id, topic_id)
     </div>
 
     <div class="slide">
-        <h4>The code then become much more readable</h4>
+        <h4>The code then become easier to understand</h4>
         <pre><code class="python">
 def matches(self, user_id, event_id, topic_id):
     """ Return a list of users whose answer is similar. """
@@ -234,19 +235,114 @@ def matches(self, user_id, event_id, topic_id):
         return None
 
     return UserEvent.matches(user_id, event_id, topic_id)
+        </code></pre>
     </div>
 
 </section>
 
-<section class="slide" id="testing">
-    <h2>Lettuce</h2>
-    <p>Is lettuce a vegetable or a testing platform?!</p>
-    <pre><code>Sample code?</code></pre>
+<section class="slide" id="mongo">
+    <h2>MongoDB</h2>
+    <div class="slide">
+        <ul>
+            <li>schema-less</li>
+            <li>non-relational</li>
+            <li>full of awesomeness!</li>
+        </ul>
+    </div>
+    <p class="slide">Well-suited to building clusters.</p>
+    <p class="slide">Harder to break.</p>
+    <div class="slide">
+        <h2>The State of MongoDB in Python</h2>
+        <p>
+            Choices for MongoDB in Python are limited to MongoEngine and
+            MongoKit.
+        </p>
+        <p>So we rolled our own on top of raw pymongo.</p>
+    </div>
+    <p class="slide">But then we were even more limited.</p>
+    <p class="slide">Switching to MongoEngine.</p>
+    <h3 class="slide">Really nice!</h3>
 </section>
 
-<section class="slide" id="worker">
-    <h2>Worker Process</h1>
-    <p>MongoDB as a low-latency queue.</p>
+<section class="slide" id="migrations">
+    <h2>Migrations</h2>
+    <p class="slide">NoSQL == no migrations, right?</p>
+    <h3 class="slide hide">WRONG!!</h3>
+    <ul>
+        <li class="slide">DB is schema-less</li>
+        <li class="slide">But for the sake of sanity, app shouldn't be</li>
+        <li class="slide">Data and content can change</li>
+    </ul>
+    <h3 class="slide">Migration modes</h3>
+    <ul>
+        <li class="slide">In Python, on-the-fly</li>
+        <li class="slide">Migration scripts</li>
+        <li class="slide">Auto-migrate on deployment</p>
+    </ul>
+</section>
+
+<section class="slide" id="lettuce">
+    <h2>Lettuce</h2>
+    <p>Is lettuce a vegetable or a testing platform?!</p>
+    <pre><code>
+Feature: Main show
+    In order ward off boredom and hopefully get laid
+    As a facebook user and bachelor wannabe
+    I want to take part in the best of the best
+    And that means playing the Bachelor game
+
+    # Actors:
+    #   - B: Bachelor
+    #   - C: Contestant
+    #   - S: System
+    #   - F: Friend
+
+    Scenario: B starts a show
+        Given B has enough points to start a show
+         When B initiates a new show
+          And B selects four of his pictures
+          And B starts the audition
+         Then B should loose the expected points to start a show
+          And B should not yet have access to the audition results
+          And B should not be able to start another show
+
+    Scenario: S selects the audition winners
+        Given the allotted audition time has elapsed
+          And 24 C or more have entered the audition
+         When S selects the 24 best matches
+         Then there should be 24 C in the show
+          And the lives of countless others shall be ruined
+    </code></pre>
+</section>
+
+<section class="slide" id="lettuce-python">
+    <h2>Lettuce</h2>
+    <p>Lettuce steps map to Python code:</p>
+    <pre><code>
+Scenario: C looses episode 1
+    Given C has lost episode 1
+     When C asks for episode 1 results
+     Then C should be informed that he failed the profound cuteness test
+      And C should gain the points earned by episode 1 losers
+      And C should should not have access to episode 2
+    </code></pre>
+
+    <pre><code>
+@step(u'Then C should be informed that he failed the profound cuteness test')
+def then_c_should_be_informed_that_he_failed_the_profound_cuteness_test(step):
+    w.golem.as_bachelor()
+    losers = w.golem.get('12_roses_losers', True)
+
+    for l in losers:
+        user = w.golem.user_api.get_user(l)
+        w.golem.as_contestant(user)
+        show = w.golem.show_api.get_by_id(w.golem.show_id)
+        is_winner = w.golem.show_api.collect_12roses(show=show)
+        assert not is_winner
+    </code></pre>
+</section>
+
+<section class="slide" id="nsasch">
 </section>
 
 <section class="slide" id="facebook">
@@ -303,20 +399,12 @@ This is what some complicated Facebook code looks like.
     <pre><code>Sample gamesteps code</code></pre>
 </section>
 
-<section class="slide" id="mongo">
-    <h2>The State of Mongo</h2>
-    <p>Mongo is schema-less and non-relational. It's really cool!</p>
-    <h2>The State of Mongo in Python</h2>
-    <p>Mongo in Python is sorta limited. So we rolled our own.</p>
-    <h2>ORM, ODM, etc.</h2>
-    <p>More stuff about working with Python and our choice of MongoEngine.</p>
+<section class="slide" id="alice">
 </section>
 
-<section class="slide" id="migrations">
-    <h2>Schema-Less Migrations</h2>
-    <p>Data formats change, our "schema" changes, etc.</p>
-    <h2>Auto-Migrations</h2>
-    <p>Auto-migrate on deploy, how we do it, the benefits, the problems, etc.</p>
+<section class="slide" id="worker">
+    <h2>Worker Process</h1>
+    <p>MongoDB as a low-latency queue.</p>
 </section>
 
 <section class="slide" id="fin">
