@@ -365,9 +365,17 @@ def then_c_should_be_informed_that_he_failed_the_profound_cuteness_test(step):
 
 <section class="slide" id="facebook">
     <h2>Facebook Integration</h2>
-    <p>Take advantage of an existing account, friends, and sharing. Great for the product, no fun for developers.</p>
+    <p>Facebook lets you take advantage of an existing account, their friends, and social sharing. Great for marketting, no fun for developers.</p>
     <pre><code>
-This is what some complicated Facebook code looks like.
+# What's the purpose of this... there's no id when you ask to add the
+# app so it raises the exception before a user can register
+# ncadou: the purpose of this check is to prevent the creation of blank
+# users when the facebook API actually fails. See commit 7bfef9df70f7.
+#if not 'id' in user:
+#    # TODO log something
+#    raise Exception('Facebook API error')
+if user.get('error', None):
+    return dict()
     </code></pre>
 </section>
 
@@ -377,15 +385,26 @@ This is what some complicated Facebook code looks like.
     <ul>
         <li class="slide" id="facebook-api-downtime">
             <h3>Downtime</h3>
+            <!-- Is anybody else's Internet down? Oh, nevermind, it's just
+            Facebook. Cannot rely on it, and caching isn't always an option-->
         </li>
         <li class="slide" id="facebook-api-speed">
             <h3>Speed (Latency in every request)</h3>
+            <!-- FQL lets you do cool queries, but it's too slow. OpenGraph is
+            better, but some requests just timeout. -->
         </li>
         <li class="slide" id="facebook-api-changes">
             <h3>Sudden Changes</h3>
+            <!-- Test user API no longer works, requests are changing,
+            notifications will be phased out, but the replacement isn't
+            fully implemented or documented yet. -->
         </li>
         <li class="slide" id="facebook-api-docs">
             <h3>Documentation - Comparable to Early-Stage FOSS</h3>
+            <!-- Except the forums are filled with typical Facebook users,
+            all using PHP. You need to request permissions for certain things,
+            but the name isn't always enough, but there's no docs.
+            Error as string vs. list of one string.-->
         </li>
     </ul>
 </section>
@@ -397,14 +416,21 @@ This is what some complicated Facebook code looks like.
         <li class="slide" id="hierarchy">
             <h3>Namespaces are one honking great idea -- let's do more of those!</h3>
             <p>Seriously, hierarchical organization is easy to understand and use.</p>
+            <!-- Organize your API to match the data you're working with. Pick a
+            naming scheme, and stick with it. RESTful or anything, just be
+            consistent. -->
         </li>
         <li class="slide" id="document-calls">
             <h3>Document every API call</h3>
             <p>Explain what it does and any nuances.</p>
+            <!-- The name is not enough to figure out what your function does.
+            New developers will need trial and error to guess your API. -->
         </li>
         <li class="slide" id="document-variables">
             <h3>Document every variable</h3>
             <p>Type, possible options (and what each option means), and if its required.</p>
+            <!-- Is a request_id a string? an integer? Do I need to provide
+            values for everything? What do they default to? -->
         </li>
     </ul>
 </section>
@@ -412,9 +438,37 @@ This is what some complicated Facebook code looks like.
 <section class="slide" id="steps">
     <h2>Mapping Game Logic to Objects</h2>
     <p>Multiplayer social games are step and role based.</p>
+    <!-- Finite state machines are step-based too. Game object with Steps
+    makes objects out of logic. Consistant methods to get the next step
+    and url, ajax for the step, is_popup. 
+    "Stops" are roadblocks and prevent next steps.
+    Security is easy to implement. -->
+    <img src="images/flowchart.png"/>
+</section>
+<section class="slide" id="tasks and timers">
     <h2>System tasks and timers</h2>
     <p>Certain tasks have time limits or system requirements</p>
-    <pre><code>Sample gamesteps code</code></pre>
+    <!-- System role for decision making after elapsed time,
+    timer to force game advancement and force players to go
+    (quiz answers, for example) -->
+    <pre><code>
+def make_steps():
+    g = GameSteps()
+
+    # Episode 0 - Audition
+    g.add(bachelor=g.step('show_create', episode=0))
+    g.add(bachelor=g.step('audition_wait', has_url=False, episode=0,
+                          can_skip=True),
+          contestant=g.step('audition_enter', episode=0))
+    g.add(contestant=g.step('audition_wait', can_skip=True, has_url=False,
+                            episode=0))
+    g.add(system=g.step('select_contestants', has_url=False, is_stop=True,
+                        timer=Tuneable().get_durations(0),
+                        callback=callback.select_contestants))
+    g.add(bachelor=g.step('audition_result', label='Reveal Audition Results',
+                          episode=0),
+          contestant=g.step('audition_result', label='Reveal Audition Results',
+                            episode=0))</code></pre>
 </section>
 
 <section class="slide" id="alice">
