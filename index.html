@@ -82,9 +82,163 @@
 <section class="slide" id="ncadou">
 </section>
 
+<section class="slide" id="infrastructure">
+    <h2>Infrastructure</h2>
+    <p>
+        <img src="images/infrastructure.jpg" alt="Infrastructure" />
+    </p>
+</section>
+
+<section class="slide" id="libraries">
+    <h2>Libraries</h2>
+    <h3>Main libs</h3>
+    <ul>
+        <li>Pyramid</li>
+        <li>MongoEngine</li>
+        <li>zc.buildout</li>
+        <li>lettuce</li>
+    </ul>
+    <h3>Also</h3>
+    <ul>
+        <li>SCSS</li>
+        <li>futures</li>
+        <li>apscheduler</li>
+        <li>marrow.mailer</li>
+    </ul>
+</section>
+
 <section class="slide" id="architecture">
     <h2>Architecture</h2>
-    <p>Talk about the technology here, or make a list.</p>
+    <h3>Run of the mill MVC-ish</h3>
+    <p>&nbsp;</p>
+    <div class="slide controller">
+        <h4>Controller</h4>
+        <p>Pyramid Routes + Views</p>
+    </div>
+    <div class="slide model">
+        <h4>Model</h4>
+        <p>Core API + Data Access Layer</p>
+    </div>
+    <div class="slide view">
+        <h4>View</h4>
+        <p>Views + Templates</p>
+    </div>
+</section>
+
+<section class="slide" id="thin-views">
+    <h2>Architecture</h2>
+    <h3>Thin views</h3>
+    <pre><code class="python">
+@view_config(route_name='audition_enter', http_cache=0,
+             renderer='bachelor:templates/show/audition/enter.mako')
+def audition_enter(self):
+    return dict(show=self._show)
+
+@view_config(route_name='audition_enter_confirm', request_method='POST',
+        xhr=True, renderer='json', http_cache=0)
+def audition_ajax(self):
+    if self.request.POST.get('photo'):
+        photo = json.loads(self.request.POST.get('photo'))['url']
+    else:
+        photo = None
+
+    self.show_api.audition(self._show, picture=photo)
+
+    return dict(next=self.request.route_path('audition_list'))
+    </code></pre>
+</section>
+
+<section class="slide" id="bad-views">
+    <h2>Architecture</h2>
+    <h3>Fat views (yuk!)</h3>
+    <pre><code class="python">
+@view_config(route_name='event_list', http_cache=0,
+             renderer='bachelor:templates/event/list.mako')
+def list_(self):
+    """ Return a list of events, customized for the user. """
+    page = int(self.request.params.get('page', 1))
+    reward = Tuneable.get_event_gain(self.user_api.level(self.user))
+    cost = Tuneable.get_topic_cost(self.user_api.level(self.user))
+    score = self.user_api.get_score()
+    can_participate = cost.validate(score)
+    details = cost.validate(score, True)
+    notifications = self.user_api.notifications(self.user)
+
+    allowed_cities = Tuneable.get_allowed_cities(self.user_api.level())
+    current_city = self.request.session.get('current_city', None)
+
+    if self.request.method == 'POST' and 'city' in self.request.params:
+        current_city = self.request.POST.get('city', None)
+
+    if not current_city:
+        current_city = allowed_cities[0]
+    elif current_city not in allowed_cities:
+        current_city = 'hell'  # easter egg for those who like to play with
+                               # data
+
+    self.request.session['current_city'] = current_city
+    self.request.session['allowed_cities'] = allowed_cities
+
+    paginated_events = Pagination(self.event_api.get_user_events(
+        with_events=True, city=current_city),
+        Tuneable.get_per_page('events'),
+        Tuneable.get_pages_per_chunk())
+
+    return dict(
+            user_events=paginated_events.get_page_items(page),
+            pagination=paginated_events,
+            current_page=page,
+            reward=reward,
+            requirement=cost,
+            can_participate=can_participate,
+            req_details=details,
+            notifications=notifications,
+            cities=Tuneable.get_cities(),
+            current_city=current_city,
+            allowed_cities=allowed_cities,
+        )
+    </code></pre>
+</section>
+
+<section class="slide" id="api-layer">
+    <h2>Architecture</h2>
+    <h3>API Layer and Data Access</h3>
+
+    <div class="slide">
+        <h4>Instead of littering the API with stuff like this</h4>
+        <pre><code class="python">
+u = UserIO.one(user_id)
+
+if not u:
+    topic = []
+else:
+    topic = u['answers'].get(event_id, {}).get(str(topic_id), [])
+        </code></pre>
+    </div>
+
+    <div class="slide">
+        <h4>We use object model methods</h4>
+        <pre><code class="python">
+topic = UserEvent.get_topic_answers(user_id, event_id, topic_id)
+        </code></pre>
+    </div>
+
+    <div class="slide">
+        <h4>The code then become much more readable</h4>
+        <pre><code class="python">
+def matches(self, user_id, event_id, topic_id):
+    """ Return a list of users whose answer is similar. """
+    topic = UserEvent.get_topic_answers(user_id, event_id, topic_id)
+
+    if topic is None:
+        return None
+
+    return UserEvent.matches(user_id, event_id, topic_id)
+    </div>
+
+</section>
+
+<section class="slide" id="testing">
     <h2>Lettuce</h2>
     <p>Is lettuce a vegetable or a testing platform?!</p>
     <pre><code>Sample code?</code></pre>

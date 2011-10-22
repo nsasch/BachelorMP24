@@ -47,6 +47,9 @@
   display: block;
   font-size: 14px;
 }
+.deck-container code {
+  font-size: 72%;
+}
 
 @media print {
   .theme-menu {
