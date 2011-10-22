@@ -244,9 +244,15 @@ def matches(self, user_id, event_id, topic_id):
     <h2>MongoDB</h2>
     <div class="slide">
         <ul>
-            <li>schema-less</li>
-            <li>non-relational</li>
-            <li>full of awesomeness!</li>
+            <li>
+                <h3>schema-less</h3>
+            </li>
+            <li>
+                <h3>non-relational</h3>
+            </li>
+            <li>
+                <h3>full of awesomeness!</h3>
+            </li>
         </ul>
     </div>
     <p class="slide">Well-suited to building clusters.</p>
@@ -266,24 +272,36 @@ def matches(self, user_id, event_id, topic_id):
 
 <section class="slide" id="migrations">
     <h2>Migrations</h2>
-    <p class="slide">NoSQL == no migrations, right?</p>
-    <h3 class="slide hide">WRONG!!</h3>
+    <h3 class="slide">NoSQL == no migrations, right?</h3>
+    <h3 class="slide">WRONG!!</h3>
     <ul>
-        <li class="slide">DB is schema-less</li>
-        <li class="slide">But for the sake of sanity, app shouldn't be</li>
-        <li class="slide">Data and content can change</li>
+        <li class="slide">
+            <h3>DB is schema-less</h3>
+        </li>
+        <li class="slide">
+            <h3>But for the sake of sanity, app shouldn't be</h3>
+        </li>
+        <li class="slide">
+            <h3>Data and content can change</h3>
+        </li>
     </ul>
     <h3 class="slide">Migration modes</h3>
     <ul>
-        <li class="slide">In Python, on-the-fly</li>
-        <li class="slide">Migration scripts</li>
-        <li class="slide">Auto-migrate on deployment</p>
+        <li class="slide">
+            <h3>In Python, on-the-fly</h3>
+        </li>
+        <li class="slide">
+            <h3>Migration scripts</h3>
+        </li>
+        <li class="slide">
+            <h3>Auto-migrate on deployment</h3>
+        </li>
     </ul>
 </section>
 
 <section class="slide" id="lettuce">
     <h2>Lettuce</h2>
-    <p>Is lettuce a vegetable or a testing platform?!</p>
+    <h3>Is lettuce a vegetable or a testing platform?!</h3>
     <pre><code>
 Feature: Main show
     In order ward off boredom and hopefully get laid
@@ -317,7 +335,7 @@ Feature: Main show
 
 <section class="slide" id="lettuce-python">
     <h2>Lettuce</h2>
-    <p>Lettuce steps map to Python code:</p>
+    <h3>Lettuce steps map to Python code:</h3>
     <pre><code>
 Scenario: C looses episode 1
     Given C has lost episode 1
