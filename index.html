@@ -600,12 +600,12 @@ def make_steps():
     <pre><code>def queue(collection, query=None):
     if not collection.find():
         # This is to prevent a terrible infinite busy loop while empty.
-        waker.insert(dict(nop=True))
+        collection.insert(dict(nop=True))
     
     last = None
     query = query or {}
     
-    cursor = waker.find(query, slave_ok=True, tailable=True, await_data=True)
+    cursor = collection.find(query, slave_ok=True, tailable=True, await_data=True)
     
     while True:                             # Primary retry loop.
         try:
@@ -619,7 +619,38 @@ def make_steps():
         
         retry_query = {"_id": {"$gte": last}}
         retry_query.update(query)
-        cursor = waker.find(retry_query, slave_ok=True, tailable=True, await_data=True)</code></pre>
+        cursor = collection.find(retry_query, slave_ok=True, tailable=True, await_data=True)</code></pre>
+</section>
+
+<section class="slide" id="worker-example4-atomic">
+    <h2>Example Job Handler</h2>
+    <p>Job locking to prevent accidental execution.</p>
+    
+    <pre><code>def handler(self, job_id):
+    # Build the dictionary update.
+    update = dict(acquired=datetime.utcnow(), state="running",
+            owner=self.identity)
+    
+    try:
+        result = self.jobs.update(dict(_id=job_id, state="pending", owner=None),
+                {"$set": update}, safe=True)
+    except:
+        raise AcquireFailed()
+    
+    if not result['updatedExisting']: raise AcquireFailed()
+    
+    try:
+        job = self.jobs.find(dict(_id=job_id), limit=1,
+                fields=['callable', 'args', 'kwargs'])[0]
+    except:  # This should, in theory, never happen unless MongoDB goes away.
+        raise AcquireFailed()
+    
+    obj = pickle.loads(job['callable'].encode('ascii'))
+    args = job.get('args', [])
+    kwargs = job.get('kwargs', {})
+    
+    return obj(*args, **kwargs)
+</code></pre>
 </section>
 
 <section class="slide" id="fin">
