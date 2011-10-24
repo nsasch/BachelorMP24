@@ -471,12 +471,155 @@ def make_steps():
                             episode=0))</code></pre>
 </section>
 
-<section class="slide" id="alice">
+<section class="slide" id="worker">
+    <h2>Worker Processes</h1>
+    <p>MongoDB as RPC.</p>
+    
+    <ul>
+        <li class="slide" id="worker-tge">
+            <h3>Needed for timed game events.</h3>
+        </li>
+        <li class="slide" id="worker-fb">
+            <h3>Needed because Facebook's API is slow.</h3>
+        </li>
+        <li class="slide" id="worker-background">
+            <h3>Background task execution.</h3>
+        </li>
+        <li class="slide" id="worker-scheduled">
+            <h3>Immediate or scheduled.</h3>
+        </li>
+        <li class="slide" id="worker-capture">
+            <h3>Captures responses and exceptions.</h3>
+        </li>
+        <li class="slide" id="worker-state">
+            <h3>Acts as a state machine with locking.</h3>
+        </li>
+    </ul>
 </section>
 
-<section class="slide" id="worker">
-    <h2>Worker Process</h1>
+<section class="slide" id="worker2">
+    <h2>Worker Processes</h1>
+    <p>MongoDB as RPC.</p>
+    
+    <ul>
+        <li class="slide" id="worker-col">
+            <h3>Stores job data in a collection.</h3>
+        </li>
+        <li class="slide" id="worker-cap">
+            <h3>Notifications via capped collection.</h3>
+        </li>
+        <li class="slide" id="worker-future">
+            <h3>Uses Futures for parallel execution of tasks.</h3>
+        </li>
+        <li class="slide" id="worker-aps">
+            <h3>Uses APScheduler for timed execution of tasks.</h3>
+        </li>
+        <li class="slide" id="worker-atomic">
+            <h3>Atomic locking using "update if current" mechanic.</h3>
+        </li>
+    </ul>
+</section>
+
+<section class="slide" id="capped">
+    <h2>Capped Collections</h1>
     <p>MongoDB as a low-latency queue.</p>
+    
+    <ul>
+        <li class="slide" id="worker-limited">
+            <h3>Limited size, optionally limited document count.</h3>
+        </li>
+        <li class="slide" id="worker-ring">
+            <h3>Ring buffer design.</h3>
+            <p>Insert order.<br>Updates allowed… mostly.</p>
+        </li>
+        <li class="slide" id="worker-replication">
+            <h3>Used by MongoDB for replication.</h3>
+        </li>
+        <li class="slide" id="worker-tail">
+            <h3>Tailable cursors.</h3>
+            <p>Long-poll push, like IMAP IDLE.</p>
+        </li>
+    </ul>
+    <h2 class="slide" id="worker-demo">Live demonstration time!</h2>
+</section>
+
+<section class="slide" id="worker-example1">
+    <h2>Example Job Record</h2>
+    <p>Stored in a permanant collection.</p>
+    
+    <pre><code>{
+	"_id" : ObjectId("4ea3717f9bfbb601d2000002"),
+	"state" : "new", // pending, dead, cancelled, running, finished
+	
+	"callable" : "c__builtin__\nprint\np1\n.",
+	"args" : [ "Task", 0 ],
+	"kwargs" : { },
+	
+	"created" : ISODate("2011-10-23T01:44:31.446Z"),
+	"creator" : [ "Lucifer", 298, 466 ],
+	"owner" : null, // [ "Lucifer", 324, 456 ]
+	
+	// If scheduled, not immediate:
+	"when": ISODate("...")
+	
+	// If in progress or completed...
+	"acquired" : ISODate("..."),
+	
+	// If completed...
+	"result" : null,
+	"exception" : null,
+	"completed" : ISODate("..."),
+}</code></pre>
+</section>
+
+<section class="slide" id="worker-example2">
+    <h2>Example Notification Record</h2>
+    <p>Stored in the capped collection.</p>
+    
+    <pre><code>// Workaround for MongoDB quirk.
+{ "_id" : ObjectId("4ea371629bfbb601c8000000"), "nop" : true }
+
+{ // New job.
+	"_id" : ObjectId("4ea371769bfbb601d2000001"),
+	"job_id" : ObjectId("4ea371769bfbb601d2000000"),
+	"creator" : [ "Lucifer", 298, 466 ]
+}
+
+{ // Finished job.
+	"_id" : ObjectId("4ea371769bfbb601c8000001"),
+	"job_id" : ObjectId("4ea371769bfbb601d2000000"),
+	"creator" : [ "Lucifer", 324, 456 ],
+	"result" : true
+}</code></pre>
+</section>
+
+<section class="slide" id="worker-example3-queue">
+    <h2>Example Queue Runner</h2>
+    <p>Python generators are teh win.</p>
+    
+    <pre><code>def queue(collection, query=None):
+    if not collection.find():
+        # This is to prevent a terrible infinite busy loop while empty.
+        waker.insert(dict(nop=True))
+    
+    last = None
+    query = query or {}
+    
+    cursor = waker.find(query, slave_ok=True, tailable=True, await_data=True)
+    
+    while True:                             # Primary retry loop.
+        try:
+            while cursor.alive:             # Inner record loop; may time out.
+                for record in cursor:
+                    last = record['_id']
+                    yield record
+        
+        except OperationFailure:
+            pass
+        
+        retry_query = {"_id": {"$gte": last}}
+        retry_query.update(query)
+        cursor = waker.find(retry_query, slave_ok=True, tailable=True, await_data=True)</code></pre>
 </section>
 
 <section class="slide" id="fin">
